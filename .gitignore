@@ -1,0 +1,40 @@
+Python
+
+pycache/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+
+VS Code
+
+.vscode/
+.idea/
+
+Data & Large Files
+
+data/
+sky_scrape_output/
+*.csv
+
+Machine Learning Models
+
+models/.keras
+models/.h5
+models/*.pkl
+*.keras
+*.h5
+*.pkl
+.ipynb_checkpoints/
+
+Frontend (React/Node)
+
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.env
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
