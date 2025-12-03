@@ -7,7 +7,7 @@ import os
 DB_USER = 'cosmic_admin'
 DB_PASSWORD = 'Raghav' # IMPORTANT: Replace with your password
 DB_HOST = 'localhost'
-DB_PORT = '5432'
+DB_PORT = '5431'
 DB_NAME = 'cosmic_db'
 TABLE_NAME = 'celestial_objects'
 CSV_FILE_PATH = 'cosmic_full_dataset.csv'

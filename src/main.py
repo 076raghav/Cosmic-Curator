@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 class ScanRequest(BaseModel):
     ra: float
     dec: float
-    radius: float = 3.0
+    radius: float = 0.5
     limit: int = 10
 
 app = FastAPI(
@@ -25,7 +25,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"], # Allow all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,7 +57,12 @@ def read_root():
 def scan_sky_region(request: ScanRequest):
     try:
         print(f"Received scan request for RA={request.ra}, DEC={request.dec}")
-        v = Vizier(columns=['*'], row_limit=1000000)
+        
+        # --- HIGH DENSITY CONFIGURATION ---
+        # row_limit of 50,000 for spectacular visuals.
+        # Note: Vizier limits may apply, but this requests the maximum reasonable batch.
+        v = Vizier(columns=['*', '+_r'], row_limit=50000) 
+        
         coord = SkyCoord(ra=request.ra, dec=request.dec, unit=(u.deg, u.deg), frame='icrs')
         result = v.query_region(coord, radius=request.radius * u.deg, catalog="I/355/gaiadr3")
         
@@ -86,7 +91,7 @@ def scan_sky_region(request: ScanRequest):
                 processed_df[col] = pd.to_numeric(live_data_renamed[col], errors='coerce').fillna(0)
         
         X_scaled = scaler.transform(processed_df)
-        X_reconstructed = model.predict(X_scaled)
+        X_reconstructed = model.predict(X_scaled, verbose=0) # verbose=0 hides progress bar for speed
         reconstruction_error = np.mean(np.square(X_scaled - X_reconstructed), axis=1)
         
         results_df = live_data_clean.copy()
@@ -95,13 +100,15 @@ def scan_sky_region(request: ScanRequest):
         # Separate anomalies from the rest of the field
         anomalies_df = results_df.sort_values(by='anomaly_score', ascending=False).head(request.limit)
         
-        # Get the brightest field stars for context (that are not in the anomaly list)
+        # Return ALL remaining stars for the dense map (up to 40,000 to prevent browser crash)
         non_anomalies_df = results_df.drop(anomalies_df.index)
-        field_stars_df = non_anomalies_df.sort_values(by='Gmag', ascending=True).head(200) # Brightest 200
+        field_stars_df = non_anomalies_df.head(40000) 
 
         # Format anomalies for response
         anomaly_response = [{
             "id": row.get('Source', 'N/A'),
+            "name": str(row.get('Source', 'N/A')), # Use Source ID as name if name unavailable
+            "type": "Unknown", # Gaia main catalog doesn't always have OTYPE, using ID is safer
             "ra": row.get('RA_ICRS', 0),
             "dec": row.get('DE_ICRS', 0),
             "anomaly_score": row['anomaly_score']
@@ -112,7 +119,7 @@ def scan_sky_region(request: ScanRequest):
             "id": row.get('Source', 'N/A'),
             "ra": row.get('RA_ICRS', 0),
             "dec": row.get('DE_ICRS', 0),
-            "mag": row.get('Gmag', 0) # Magnitude for sizing the star
+            "mag": row.get('Gmag', 0) 
         } for _, row in field_stars_df.iterrows()]
             
         print(f"Returning {len(anomaly_response)} anomalies and {len(field_star_response)} field stars.")
@@ -128,4 +135,3 @@ def scan_sky_region(request: ScanRequest):
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-

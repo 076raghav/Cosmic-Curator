@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+tensorflow
+pandas
+numpy
+scikit-learn
+astroquery
+pydantic
+requests
